@@ -21,6 +21,7 @@
 #include <node.h>
 #include <stdlib.h>
 #include <v8.h>
+#include <uv.h>
 #include <list>
 #include <map>
 #include <algorithm>
@@ -66,12 +67,12 @@ static WatcherMap pollwMap;
 static uv_timer_t timeout_handle;
 static bool query = false;
 
-static void timeout_cb(uv_timer_t* w, int revents)
+static void timeout_cb(uv_timer_t* w)
 {
     /* nop */
 }
 
-static void uv_timeout_cb(uv_timer_t *handle, int status)
+static void uv_timeout_cb(uv_timer_t *handle)
 {
     query = true;
     uv_timer_stop(&timeout_handle);
@@ -110,7 +111,7 @@ static void poll_cb(uv_poll_t* handle, int status, int events)
     uv_poll_stop(handle);
 }
 
-static void prepare_cb(uv_prepare_t* w, int revents)
+static void prepare_cb(uv_prepare_t* w)
 {
     struct econtext* ctx = (struct econtext*)(((char*)w) - offsetof(struct econtext, pw));
     gint timeout;
@@ -221,7 +222,7 @@ static void prepare_cb(uv_prepare_t* w, int revents)
     }
 }
 
-static void check_cb(uv_check_t* w, int revents)
+static void check_cb(uv_check_t* w)
 {
     struct econtext* ctx = (struct econtext*)(((char*)w) - offsetof(struct econtext, cw));
 
@@ -244,7 +245,7 @@ static struct econtext default_context;
 
 void init(Handle<Object> target)
 {
-    HandleScope scope;
+    HandleScope scope(Isolate::GetCurrent());
     gMainLoop = g_main_loop_new(NULL, true);
 
     GMainContext *gc = g_main_context_default();

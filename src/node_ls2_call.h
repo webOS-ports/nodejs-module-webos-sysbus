@@ -25,7 +25,7 @@
 
 class LS2Handle;
 
-class LS2Call : LS2Base {
+class LS2Call : public LS2Base {
 public:
     enum {kUnlimitedResponses = 0};
 
@@ -44,10 +44,10 @@ public:
 protected:
 	// Called by V8 when the "Call" function is used with new. This has to be here, but the
 	// resulting "Call" object is useless as it has no matching LSHandle structure.
-	static v8::Handle<v8::Value> New(const v8::Arguments& args);
+    static void New(const v8::FunctionCallbackInfo<v8::Value>& args);
 
-	static v8::Handle<v8::Value> CancelWrapper(const v8::Arguments& args);
-	static v8::Handle<v8::Value> SetResponseTimeoutWrapper(const v8::Arguments& args);
+    static void CancelWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
+	static void SetResponseTimeoutWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
     void Cancel();
 	void SetResponseTimeout(int timeout_ms);
 

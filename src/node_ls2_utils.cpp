@@ -20,17 +20,17 @@
 
 template <> v8::Handle<v8::Value> ConvertToJS<const char*>(const char* v)
 {
-    return v8::String::New(v);
+    return v8::String::NewFromUtf8(v8::Isolate::GetCurrent(), v);
 }
 
 template <> v8::Handle<v8::Value> ConvertToJS<uint32_t>(uint32_t v)
 {
-    return v8::Integer::NewFromUnsigned(v);
+    return v8::Integer::NewFromUnsigned(v8::Isolate::GetCurrent(), v);
 }
 
 template <> v8::Handle<v8::Value> ConvertToJS<bool>(bool v)
 {
-    return v8::Boolean::New(v);
+    return v8::Boolean::New(v8::Isolate::GetCurrent(), v);
 }
 
 template <> v8::Handle<v8::Value> ConvertToJS< v8::Handle<v8::Value> >(v8::Handle<v8::Value>  v)

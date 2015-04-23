@@ -42,7 +42,7 @@ public:
 
 protected:
 	// Called by V8 when the "Handle" function is used with new.
-	static v8::Handle<v8::Value> New(const v8::Arguments& args);
+	static void New(const v8::FunctionCallbackInfo<v8::Value>& args);
 
 private:
 	// This constructor is private as these objects are only created by the 
@@ -50,28 +50,28 @@ private:
 	LS2Handle(const char* name = "", bool publicBus = false);
 	virtual ~LS2Handle();
 
-	static v8::Handle<v8::Value> CallWrapper(const v8::Arguments& args);
+	static void CallWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
 	v8::Handle<v8::Value> Call(const char* busName, const char* payload);
 
-	static v8::Handle<v8::Value> WatchWrapper(const v8::Arguments& args);
+	static void WatchWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
 	v8::Handle<v8::Value> Watch(const char* busName, const char* payload);
 
-	static v8::Handle<v8::Value> SubscribeWrapper(const v8::Arguments& args);
+	static void SubscribeWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
 	v8::Handle<v8::Value> Subscribe(const char* busName, const char* payload);
 
-	static v8::Handle<v8::Value> CancelWrapper(const v8::Arguments& args);
+	static void CancelWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
 	bool Cancel(LSMessageToken token);
 
-	static v8::Handle<v8::Value> RegisterMethodWrapper(const v8::Arguments& args);
+	static void RegisterMethodWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
 	void RegisterMethod(const char* category, const char* methodName);
 
-	static v8::Handle<v8::Value> UnregisterWrapper(const v8::Arguments& args);
+	static void UnregisterWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
 	void Unregister();
 
-	static v8::Handle<v8::Value> PushRoleWrapper(const v8::Arguments& args);
+	static void PushRoleWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
 	void PushRole(const char* pathToRoleFile);
 
-	static v8::Handle<v8::Value> SubscriptionAddWrapper(const v8::Arguments& args);
+	static void SubscriptionAddWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
 	void SubscriptionAdd(const char* key, LS2Message* msg);
 
 	// Common implmentation for Call, Watch and Subscribe

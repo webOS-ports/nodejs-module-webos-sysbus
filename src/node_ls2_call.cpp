@@ -39,29 +39,32 @@ static Persistent<String> response_symbol;
 // to the target object.
 void LS2Call::Initialize (Handle<Object> target)
 {
-    HandleScope scope;
+    v8::Isolate* isolate = v8::Isolate::GetCurrent();
+    HandleScope scope(isolate);
 
-    Local<FunctionTemplate> t = FunctionTemplate::New(New);
+    Local<FunctionTemplate> t = FunctionTemplate::New(isolate, New);
 
-    t->SetClassName(String::New("palmbus/Call"));
+    t->SetClassName(v8::String::NewFromUtf8(isolate, "palmbus/Call"));
 
-    gCallTemplate = Persistent<FunctionTemplate>::New(t);
+    gCallTemplate.Reset(isolate, t);
 
     t->InstanceTemplate()->SetInternalFieldCount(1);
 
     NODE_SET_PROTOTYPE_METHOD(t, "cancel", CancelWrapper);
     NODE_SET_PROTOTYPE_METHOD(t, "setResponseTimeout", SetResponseTimeoutWrapper);
 
-    response_symbol = NODE_PSYMBOL("response");
+    response_symbol.Reset(isolate, String::NewFromUtf8(isolate, "response"));
 
-    target->Set(String::NewSymbol("Call"), t->GetFunction());
+    target->Set(String::NewFromUtf8(isolate, "Call"), t->GetFunction());
 }
 
 // Used by LSHandle to create a "Call" object that wraps a particular
 // LSHandle/LSMessageToken pair.
 Local<Object> LS2Call::NewForCall()
 {
-    Local<Function> function = gCallTemplate->GetFunction();
+    v8::Isolate* isolate = v8::Isolate::GetCurrent();
+    Local<FunctionTemplate> lCallTemplate = Local<FunctionTemplate>::New(isolate, gCallTemplate);
+    Local<Function> function = lCallTemplate->GetFunction();
     Local<Object> callObject = function->NewInstance();
     return callObject;
 }
@@ -98,9 +101,9 @@ void LS2Call::Call(const char* busName, const char* payload, int responseLimit)
     bool result;
     void* userData((void*)this);
     if (responseLimit == 1) {
-        result = LSCallOneReply(fHandle->Get(), busName, payload, &LS2Call::ResponseCallback, userData, &fToken, err);                
+        result = LSCallOneReply(fHandle->Get(), busName, payload, &LS2Call::ResponseCallback, userData, &fToken, err);
     } else {
-        result = LSCall(fHandle->Get(), busName, payload, &LS2Call::ResponseCallback, userData, &fToken, err);        
+        result = LSCall(fHandle->Get(), busName, payload, &LS2Call::ResponseCallback, userData, &fToken, err);
     }
     if (!result) {
         err.ThrowError();
@@ -109,22 +112,24 @@ void LS2Call::Call(const char* busName, const char* payload, int responseLimit)
 }
 
 // Called by V8 when the "Call" function is used with new.
-Handle<Value> LS2Call::New(const Arguments& args)
+void LS2Call::New(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
     try {
 	    LS2Call *m = new LS2Call();
 	    m->Wrap(args.This());
-	    return args.This();
+        args.GetReturnValue().Set(args.This());
     } catch( std::exception const & ex ) {
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(ex.what())));
+        args.GetReturnValue().Set(args.GetIsolate()->ThrowException(v8::Exception::Error(
+                v8::String::NewFromUtf8(v8::Isolate::GetCurrent(), ex.what()))));
     } catch( ... ) {
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Native function threw an unknown exception.")));
+        args.GetReturnValue().Set(args.GetIsolate()->ThrowException(v8::Exception::Error(
+                v8::String::NewFromUtf8(v8::Isolate::GetCurrent(), "Native function threw an unknown exception."))));
     }
 }
 
-Handle<Value> LS2Call::CancelWrapper(const Arguments& args)
+void LS2Call::CancelWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    return VoidMemberFunctionWrapper<LS2Call>(&LS2Call::Cancel, args);
+    VoidMemberFunctionWrapper<LS2Call>(&LS2Call::Cancel, args);
 }
 
 void LS2Call::Cancel()
@@ -133,9 +138,9 @@ void LS2Call::Cancel()
     fToken = LSMESSAGE_TOKEN_INVALID;
 }
 
-Handle<Value> LS2Call::SetResponseTimeoutWrapper(const Arguments& args)
+void LS2Call::SetResponseTimeoutWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-	return VoidMemberFunctionWrapper<LS2Call, int>(&LS2Call::SetResponseTimeout, args);
+    VoidMemberFunctionWrapper<LS2Call, int>(&LS2Call::SetResponseTimeout, args);
 }
 
 void LS2Call::SetResponseTimeout(int timeout_ms)
@@ -165,10 +170,11 @@ bool LS2Call::ResponseCallback(LSHandle*, LSMessage *message, void *ctx)
 
 bool LS2Call::ResponseArrived(LSMessage *message)
 {
-    HandleScope scope;
+    v8::Isolate* isolate = Isolate::GetCurrent();
+    HandleScope scope(isolate);
 
     fResponseCount+=1;
-    EmitMessage(response_symbol, message);
+    EmitMessage(Local<String>::New(isolate, response_symbol), message);
     const char* category = LSMessageGetCategory(message);
     bool messageInErrorCategory = (category && strcmp(LUNABUS_ERROR_CATEGORY, category) == 0);    
     if (messageInErrorCategory || (fResponseLimit != kUnlimitedResponses && fResponseCount >= fResponseLimit)) {

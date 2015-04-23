@@ -61,11 +61,12 @@ template <> struct ConvertFromJS<LS2Message*> {
 // to the target object.
 void LS2Handle::Initialize(Handle<Object> target)
 {
-    HandleScope scope;
+    v8::Isolate* isolate = v8::Isolate::GetCurrent();
+    HandleScope scope(isolate);
 
-    Local<FunctionTemplate> t = FunctionTemplate::New(New);
+    Local<FunctionTemplate> t = FunctionTemplate::New(isolate, New);
     
-    t->SetClassName(String::New("palmbus/Handle"));
+    t->SetClassName(v8::String::NewFromUtf8(isolate, "palmbus/Handle"));
 
     t->InstanceTemplate()->SetInternalFieldCount(1);
 
@@ -78,10 +79,10 @@ void LS2Handle::Initialize(Handle<Object> target)
     NODE_SET_PROTOTYPE_METHOD(t, "pushRole", PushRoleWrapper);
     NODE_SET_PROTOTYPE_METHOD(t, "unregister", UnregisterWrapper);
 
-    cancel_symbol = NODE_PSYMBOL("cancel");
-    request_symbol = NODE_PSYMBOL("request");
+    cancel_symbol.Reset(isolate, String::NewFromUtf8(isolate, "cancel"));
+    request_symbol.Reset(isolate, String::NewFromUtf8(isolate, "request"));
 
-    target->Set(String::NewSymbol("Handle"), t->GetFunction());
+    target->Set(String::NewFromUtf8(isolate, "Handle"), t->GetFunction());
 }
 
 void LS2Handle::CallCreated(LS2Call*)
@@ -101,10 +102,11 @@ LSHandle* LS2Handle::Get()
 }
 
 // Called by V8 when the "Handle" function is used with new.
-Handle<Value> LS2Handle::New(const Arguments& args)
+void LS2Handle::New(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
+    v8::Isolate* isolate = v8::Isolate::GetCurrent();
     try {
-        HandleScope scope;
+        HandleScope scope(isolate);
         string busName;
         const char* busNamePtr = NULL;
         bool publicBus = false;
@@ -124,13 +126,13 @@ Handle<Value> LS2Handle::New(const Arguments& args)
         LS2Handle *handle = new LS2Handle(busNamePtr, publicBus);
         handle->Wrap(args.This());
 
-        return args.This();
+        args.GetReturnValue().Set(args.This());
     } catch( std::exception const & ex ) {
-        v8::ThrowException( v8::Exception::Error(v8::String::New(ex.what())));
-		return Local<Value>::New(Undefined());
+        isolate->ThrowException( v8::Exception::Error(v8::String::NewFromUtf8(isolate, ex.what())));
+        args.GetReturnValue().SetUndefined();
     } catch( ... ) {
-        v8::ThrowException( v8::Exception::Error(v8::String::New("Native function threw an unknown exception.")));
-		return Local<Value>::New(Undefined());
+        isolate->ThrowException( v8::Exception::Error(v8::String::NewFromUtf8(isolate, "Native function threw an unknown exception.")));
+        args.GetReturnValue().SetUndefined();
     }
 }
 
@@ -161,9 +163,9 @@ LS2Handle::~LS2Handle()
 	}
 }
 
-Handle<Value> LS2Handle::CallWrapper(const Arguments& args)
+void LS2Handle::CallWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    return MemberFunctionWrapper<LS2Handle, Handle<Value>, const char*, const char*>(&LS2Handle::Call, args);
+    MemberFunctionWrapper<LS2Handle, Handle<Value>, const char*, const char*>(&LS2Handle::Call, args);
 }
 
 Handle<Value> LS2Handle::Call(const char* busName, const char* payload)
@@ -171,9 +173,9 @@ Handle<Value> LS2Handle::Call(const char* busName, const char* payload)
     return CallInternal(busName, payload, 1);
 }
 
-Handle<Value> LS2Handle::WatchWrapper(const Arguments& args)
+void LS2Handle::WatchWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    return MemberFunctionWrapper<LS2Handle, Handle<Value>, const char*, const char*>(&LS2Handle::Watch, args);
+    MemberFunctionWrapper<LS2Handle, Handle<Value>, const char*, const char*>(&LS2Handle::Watch, args);
 }
 
 Handle<Value> LS2Handle::Watch(const char* busName, const char* payload)
@@ -181,9 +183,9 @@ Handle<Value> LS2Handle::Watch(const char* busName, const char* payload)
     return CallInternal(busName, payload, 2);
 }
 
-Handle<Value> LS2Handle::SubscribeWrapper(const Arguments& args)
+void LS2Handle::SubscribeWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    return MemberFunctionWrapper<LS2Handle, Handle<Value>, const char*, const char*>(&LS2Handle::Subscribe, args);
+    MemberFunctionWrapper<LS2Handle, Handle<Value>, const char*, const char*>(&LS2Handle::Subscribe, args);
 }
 
 Handle<Value> LS2Handle::Subscribe(const char* busName, const char* payload)
@@ -191,9 +193,9 @@ Handle<Value> LS2Handle::Subscribe(const char* busName, const char* payload)
     return CallInternal(busName, payload, LS2Call::kUnlimitedResponses);
 }
 
-Handle<Value> LS2Handle::CancelWrapper(const Arguments& args)
+void LS2Handle::CancelWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    return MemberFunctionWrapper<LS2Handle, bool, LSMessageToken>(&LS2Handle::Cancel, args);
+    MemberFunctionWrapper<LS2Handle, bool, LSMessageToken>(&LS2Handle::Cancel, args);
 }
 
 bool LS2Handle::Cancel(LSMessageToken t)
@@ -206,9 +208,9 @@ bool LS2Handle::Cancel(LSMessageToken t)
     return true;
 }
 
-Handle<Value> LS2Handle::PushRoleWrapper(const Arguments& args)
+void LS2Handle::PushRoleWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    return VoidMemberFunctionWrapper<LS2Handle, const char*>(&LS2Handle::PushRole, args);
+    VoidMemberFunctionWrapper<LS2Handle, const char*>(&LS2Handle::PushRole, args);
 }
 
 void LS2Handle::PushRole(const char* pathToRoleFile)
@@ -220,9 +222,9 @@ void LS2Handle::PushRole(const char* pathToRoleFile)
     }
 }
 
-Handle<Value> LS2Handle::RegisterMethodWrapper(const Arguments& args)
+void LS2Handle::RegisterMethodWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    return VoidMemberFunctionWrapper<LS2Handle, const char*, const char*>(&LS2Handle::RegisterMethod, args);
+    VoidMemberFunctionWrapper<LS2Handle, const char*, const char*>(&LS2Handle::RegisterMethod, args);
 }
 
 void LS2Handle::RegisterMethod(const char* category, const char* methodName)
@@ -238,9 +240,9 @@ void LS2Handle::RegisterMethod(const char* category, const char* methodName)
     RegisterCategory(category, m->GetMethods());
 }
 
-Handle<Value> LS2Handle::UnregisterWrapper(const Arguments& args)
+void LS2Handle::UnregisterWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    return VoidMemberFunctionWrapper<LS2Handle>(&LS2Handle::Unregister, args);
+    VoidMemberFunctionWrapper<LS2Handle>(&LS2Handle::Unregister, args);
 }
 
 void LS2Handle::Unregister()
@@ -271,9 +273,9 @@ void LS2Handle::Unregister()
     fRegisteredMethods.clear();
 }
 
-Handle<Value> LS2Handle::SubscriptionAddWrapper(const Arguments& args)
+void LS2Handle::SubscriptionAddWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    return VoidMemberFunctionWrapper<LS2Handle, const char*, LS2Message*>(&LS2Handle::SubscriptionAdd, args);
+    VoidMemberFunctionWrapper<LS2Handle, const char*, LS2Message*>(&LS2Handle::SubscriptionAdd, args);
 }
 
 void LS2Handle::SubscriptionAdd(const char* key, LS2Message* msg)
@@ -291,7 +293,9 @@ Handle<Value> LS2Handle::CallInternal(const char* busName, const char* payload, 
     Local<Object> callObject = LS2Call::NewForCall();
     LS2Call *call = node::ObjectWrap::Unwrap<LS2Call>(callObject);
     if (!call) {
-        return v8::ThrowException(v8::String::New("Unable to unwrap native object."));
+        v8::Isolate* isolate = v8::Isolate::GetCurrent();
+        return isolate->ThrowException(
+                v8::String::NewFromUtf8(isolate, "Unable to unwrap native object."));
     }
     call->SetHandle(this);
     call->Call(busName, payload, responseLimit);
@@ -333,9 +337,10 @@ bool LS2Handle::CancelCallback(LSHandle *sh, LSMessage *message, void *ctx)
 
 bool LS2Handle::CancelArrived(LSMessage *message)
 {
-    HandleScope scope;
+    v8::Isolate* isolate = v8::Isolate::GetCurrent();
+    HandleScope scope(isolate);
     //UnrefIfPending(LSMessageGetResponseToken(message));
-    EmitMessage(cancel_symbol, message);
+    EmitMessage(Local<String>::New(isolate, cancel_symbol), message);
     return true;
 }
 
@@ -347,8 +352,9 @@ bool LS2Handle::RequestCallback(LSHandle *sh, LSMessage *message, void *ctx)
 
 bool LS2Handle::RequestArrived(LSMessage *message)
 {
-    HandleScope scope;
-    EmitMessage(request_symbol, message);
+    v8::Isolate* isolate = v8::Isolate::GetCurrent();
+    HandleScope scope(isolate);
+    EmitMessage(Local<String>::New(isolate, request_symbol), message);
     return true;
 }
 

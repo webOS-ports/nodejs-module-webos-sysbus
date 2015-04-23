@@ -31,7 +31,7 @@ using namespace node;
 // of how the conversion system works.
 template <> v8::Handle<v8::Value> ConvertToJS<LSMessageToken>(LSMessageToken v)
 {
-    return v8::Integer::NewFromUnsigned(v);
+    return v8::Integer::NewFromUnsigned(v8::Isolate::GetCurrent(), v);
 }
 
 // Need to hold on to a reference to the function template for use by
@@ -42,13 +42,14 @@ Persistent<FunctionTemplate> LS2Message::gMessageTemplate;
 // to the target object.
 void LS2Message::Initialize (Handle<Object> target)
 {
-    HandleScope scope;
+    v8::Isolate* isolate = v8::Isolate::GetCurrent();
+    HandleScope scope(isolate);
 
-    Local<FunctionTemplate> t = FunctionTemplate::New(New);
+    Local<FunctionTemplate> t = FunctionTemplate::New(isolate, New);
 
-    t->SetClassName(String::New("palmbus/Message"));
+    t->SetClassName(v8::String::NewFromUtf8(isolate, "palmbus/Message"));
 
-    gMessageTemplate = Persistent<FunctionTemplate>::New(t);
+    gMessageTemplate.Reset(isolate, t);
 
     t->InstanceTemplate()->SetInternalFieldCount(1);
 
@@ -66,7 +67,7 @@ void LS2Message::Initialize (Handle<Object> target)
     NODE_SET_PROTOTYPE_METHOD(t, "isSubscription", IsSubscriptionWrapper);
     NODE_SET_PROTOTYPE_METHOD(t, "respond", RespondWrapper);
 
-    target->Set(String::NewSymbol("Message"), t->GetFunction());
+    target->Set(String::String::NewFromUtf8(isolate, "Message"), t->GetFunction());
 }
 
 // Used by LSHandle to create a "Message" object that wraps a particular
@@ -75,7 +76,8 @@ Local<Value> LS2Message::NewFromMessage(LSMessage* message)
 {
     TryCatch try_catch;
 
-    Local<Function> function = gMessageTemplate->GetFunction();
+    v8::Isolate* isolate = v8::Isolate::GetCurrent();
+    Local<Function> function = v8::Local<FunctionTemplate>::New(isolate, gMessageTemplate)->GetFunction();
     Local<Object> messageObject = function->NewInstance();
 
     // If we get an exception in LS2Message::New, then it will return
@@ -85,7 +87,8 @@ Local<Value> LS2Message::NewFromMessage(LSMessage* message)
     if (!messageObject.IsEmpty()) {
         LS2Message *m = node::ObjectWrap::Unwrap<LS2Message>(messageObject);
         if (!m) {
-            return Local<Value>::New(v8::ThrowException(v8::String::New("Unable to unwrap native object.")));
+            return isolate->ThrowException(
+                    v8::String::NewFromUtf8(isolate, "Unable to unwrap native object."));
         }
         m->SetMessage(message);
     } else {
@@ -108,21 +111,21 @@ LSMessage* LS2Message::Get() const
 // This function exists because it is a requirement of template functions. 
 // The object created with it will not be very useful, since the LS2Message
 // object doesn't correspond to any lower level LSMessage.
-Handle<Value> LS2Message::New(const Arguments& args)
+void LS2Message::New(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
     try {
         LS2Message *m = new LS2Message();
         m->Wrap(args.This());
-        return args.This();
+        args.GetReturnValue().Set(args .This());
     } catch (std::bad_alloc const & ex) {
         syslog(LOG_USER | LOG_CRIT, "%s: throwing memory allocation exception: %s", __func__, ex.what());
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(ex.what())));
+        args.GetReturnValue().Set(args.GetIsolate()->ThrowException( v8::Exception::Error(v8::String::NewFromUtf8(args.GetIsolate(), ex.what()))));
     } catch( std::exception const & ex ) {
         syslog(LOG_USER | LOG_CRIT, "%s: throwing standard exception: %s", __func__, ex.what());
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(ex.what())));
+        args.GetReturnValue().Set(args.GetIsolate()->ThrowException( v8::Exception::Error(v8::String::NewFromUtf8(args.GetIsolate(), ex.what()))));
     } catch( ... ) {
         syslog(LOG_USER | LOG_CRIT, "%s: throwing other exception", __func__);
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Native function threw an unknown exception.")));
+        args.GetReturnValue().Set(args.GetIsolate()->ThrowException( v8::Exception::Error(v8::String::NewFromUtf8(args.GetIsolate(), "Native function threw an unknown exception."))));
     }
 }
 
@@ -156,9 +159,9 @@ void LS2Message::SetMessage(LSMessage* m)
     }
 }
 
-v8::Handle<v8::Value> LS2Message::ApplicationIDWrapper(const v8::Arguments& args)
+void LS2Message::ApplicationIDWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    return MemberFunctionWrapper<LS2Message, const char*>(&LS2Message::ApplicationID, args);
+    MemberFunctionWrapper<LS2Message, const char*>(&LS2Message::ApplicationID, args);
 }
 
 const char* LS2Message::ApplicationID() const
@@ -166,9 +169,9 @@ const char* LS2Message::ApplicationID() const
     return GetString(LSMessageGetApplicationID);
 }
 
-v8::Handle<v8::Value> LS2Message::CategoryWrapper(const v8::Arguments& args)
+void LS2Message::CategoryWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    return MemberFunctionWrapper<LS2Message, const char*>(&LS2Message::Category, args);
+    MemberFunctionWrapper<LS2Message, const char*>(&LS2Message::Category, args);
 }
 
 const char* LS2Message::Category() const
@@ -176,9 +179,9 @@ const char* LS2Message::Category() const
     return GetString(LSMessageGetCategory);
 }
 
-v8::Handle<v8::Value> LS2Message::IsSubscriptionWrapper(const v8::Arguments& args)
+void LS2Message::IsSubscriptionWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    return MemberFunctionWrapper<LS2Message, bool>(&LS2Message::IsSubscription, args);
+    MemberFunctionWrapper<LS2Message, bool>(&LS2Message::IsSubscription, args);
 }
 
 bool LS2Message::IsSubscription() const
@@ -187,9 +190,9 @@ bool LS2Message::IsSubscription() const
     return LSMessageIsSubscription(fMessage);
 }
 
-v8::Handle<v8::Value> LS2Message::KindWrapper(const v8::Arguments& args)
+void LS2Message::KindWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    return MemberFunctionWrapper<LS2Message, const char*>(&LS2Message::Kind, args);
+    MemberFunctionWrapper<LS2Message, const char*>(&LS2Message::Kind, args);
 }
 
 const char* LS2Message::Kind() const
@@ -197,9 +200,9 @@ const char* LS2Message::Kind() const
     return GetString(LSMessageGetKind);
 }
 
-v8::Handle<v8::Value> LS2Message::MethodWrapper(const v8::Arguments& args)
+void LS2Message::MethodWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    return MemberFunctionWrapper<LS2Message, const char*>(&LS2Message::Method, args);
+    MemberFunctionWrapper<LS2Message, const char*>(&LS2Message::Method, args);
 }
 
 const char* LS2Message::Method() const
@@ -207,9 +210,9 @@ const char* LS2Message::Method() const
     return GetString(LSMessageGetMethod);
 }
 
-v8::Handle<v8::Value> LS2Message::PayloadWrapper(const v8::Arguments& args)
+void LS2Message::PayloadWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    return MemberFunctionWrapper<LS2Message, const char*>(&LS2Message::Payload, args);
+    MemberFunctionWrapper<LS2Message, const char*>(&LS2Message::Payload, args);
 }
 
 const char* LS2Message::Payload() const
@@ -217,9 +220,9 @@ const char* LS2Message::Payload() const
     return GetString(LSMessageGetPayload);
 }
 
-v8::Handle<v8::Value> LS2Message::PrintWrapper(const v8::Arguments& args)
+void LS2Message::PrintWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    return VoidMemberFunctionWrapper<LS2Message>(&LS2Message::Print, args);
+    VoidMemberFunctionWrapper<LS2Message>(&LS2Message::Print, args);
 }
 
 void LS2Message::Print() const
@@ -228,9 +231,9 @@ void LS2Message::Print() const
     LSMessagePrint(fMessage, stderr);
 }
 
-v8::Handle<v8::Value> LS2Message::RespondWrapper(const v8::Arguments& args)
+void LS2Message::RespondWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    return MemberFunctionWrapper<LS2Message, bool, const char*>(&LS2Message::Respond, args);
+    MemberFunctionWrapper<LS2Message, bool, const char*>(&LS2Message::Respond, args);
 }
 
 bool LS2Message::Respond(const char* payload) const
@@ -244,9 +247,9 @@ bool LS2Message::Respond(const char* payload) const
     return true;
 }
 
-v8::Handle<v8::Value> LS2Message::ResponseTokenWrapper(const v8::Arguments& args)
+void LS2Message::ResponseTokenWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    return MemberFunctionWrapper<LS2Message, LSMessageToken>(&LS2Message::ResponseToken, args);
+    MemberFunctionWrapper<LS2Message, LSMessageToken>(&LS2Message::ResponseToken, args);
 }
 
 LSMessageToken LS2Message::ResponseToken() const
@@ -254,9 +257,9 @@ LSMessageToken LS2Message::ResponseToken() const
     return GetToken(LSMessageGetResponseToken);
 }
 
-v8::Handle<v8::Value> LS2Message::SenderWrapper(const v8::Arguments& args)
+void LS2Message::SenderWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    return MemberFunctionWrapper<LS2Message, const char*>(&LS2Message::Sender, args);
+    MemberFunctionWrapper<LS2Message, const char*>(&LS2Message::Sender, args);
 }
 
 const char* LS2Message::Sender() const
@@ -264,9 +267,9 @@ const char* LS2Message::Sender() const
     return GetString(LSMessageGetSender);
 }
 
-v8::Handle<v8::Value> LS2Message::SenderServiceNameWrapper(const v8::Arguments& args)
+void LS2Message::SenderServiceNameWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    return MemberFunctionWrapper<LS2Message, const char*>(&LS2Message::SenderServiceName, args);
+    MemberFunctionWrapper<LS2Message, const char*>(&LS2Message::SenderServiceName, args);
 }
 
 const char* LS2Message::SenderServiceName() const
@@ -274,9 +277,9 @@ const char* LS2Message::SenderServiceName() const
     return GetString(LSMessageGetSenderServiceName);
 }
 
-v8::Handle<v8::Value> LS2Message::TokenWrapper(const v8::Arguments& args)
+void LS2Message::TokenWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    return MemberFunctionWrapper<LS2Message, LSMessageToken>(&LS2Message::Token, args);
+    MemberFunctionWrapper<LS2Message, LSMessageToken>(&LS2Message::Token, args);
 }
 
 LSMessageToken LS2Message::Token() const
@@ -284,9 +287,9 @@ LSMessageToken LS2Message::Token() const
     return GetToken(LSMessageGetToken);
 }
 
-v8::Handle<v8::Value> LS2Message::UniqueTokenWrapper(const v8::Arguments& args)
+void LS2Message::UniqueTokenWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    return MemberFunctionWrapper<LS2Message, const char*>(&LS2Message::UniqueToken, args);
+    MemberFunctionWrapper<LS2Message, const char*>(&LS2Message::UniqueToken, args);
 }
 
 const char* LS2Message::UniqueToken() const

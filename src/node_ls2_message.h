@@ -42,7 +42,7 @@ protected:
 	// Called by V8 when the "Message" function is used with new. This has to be here, but the
 	// resulting "Message" object is useless as it has no matching LSMessage structure from
 	// the lunaservice library.
-	static v8::Handle<v8::Value> New(const v8::Arguments& args);
+	static void New(const v8::FunctionCallbackInfo<v8::Value>& args);
 
 private:
 	// This constructor is private as these objects are only created by the 
@@ -55,43 +55,43 @@ private:
     void SetMessage(LSMessage* m);
 
 	// Wrappers and accessors for use in the "Message" function template. 
-	static v8::Handle<v8::Value> ApplicationIDWrapper(const v8::Arguments& args);
+	static void ApplicationIDWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
 	const char* ApplicationID() const;
 
-	static v8::Handle<v8::Value> CategoryWrapper(const v8::Arguments& args);
+	static void CategoryWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
 	const char* Category() const;
 
-	static v8::Handle<v8::Value> IsSubscriptionWrapper(const v8::Arguments& args);
+	static void IsSubscriptionWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
 	bool IsSubscription() const;
 
-	static v8::Handle<v8::Value> KindWrapper(const v8::Arguments& args);
+	static void KindWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
 	const char* Kind() const;
 
-	static v8::Handle<v8::Value> MethodWrapper(const v8::Arguments& args);
+	static void MethodWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
 	const char* Method() const;
 
-	static v8::Handle<v8::Value> PayloadWrapper(const v8::Arguments& args);
+	static void PayloadWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
 	const char* Payload() const;
 
-	static v8::Handle<v8::Value> PrintWrapper(const v8::Arguments& args);
+	static void PrintWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
 	void Print() const;
 
-	static v8::Handle<v8::Value> RespondWrapper(const v8::Arguments& args);
+	static void RespondWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
 	bool Respond(const char* payload) const;
 
-	static v8::Handle<v8::Value> ResponseTokenWrapper(const v8::Arguments& args);
+	static void ResponseTokenWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
 	LSMessageToken ResponseToken() const;
 
-	static v8::Handle<v8::Value> SenderWrapper(const v8::Arguments& args);
+	static void SenderWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
 	const char* Sender() const;
 
-	static v8::Handle<v8::Value> SenderServiceNameWrapper(const v8::Arguments& args);
+	static void SenderServiceNameWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
 	const char* SenderServiceName() const;
 
-	static v8::Handle<v8::Value> TokenWrapper(const v8::Arguments& args);
+	static void TokenWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
 	LSMessageToken Token() const;
 
-	static v8::Handle<v8::Value> UniqueTokenWrapper(const v8::Arguments& args);
+	static void UniqueTokenWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
 	const char* UniqueToken() const;
 
 	// Wrapper around an LSMessage string getter function that will throw an

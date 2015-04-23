@@ -1,3 +1,4 @@
+#!/usr/bin/env ruby
 # @@@LICENSE
 #
 #      Copyright (c) 2010-2013 LG Electronics, Inc.
@@ -60,27 +61,33 @@ RV_FUNCTION=<<RV_FUNCTION_TEXT
 
 // arity: <%= arity %>, const:<%= const_funcs %>
 
-template <<%= types_decl_rv(arity)%>> v8::Handle<v8::Value> MemberFunctionWrapper(RV (T::*MemFunc)(<%= params_fp_decl(arity) %>)<%= const_funcs %>, v8::Arguments const & args )
+template <<%= types_decl_rv(arity)%>> void MemberFunctionWrapper(RV (T::*MemFunc)(<%= params_fp_decl(arity) %>)<%= const_funcs %>, const v8::FunctionCallbackInfo<v8::Value>& info )
 {
-  if (args.Length() != <%= arity %>) {
-    return ThrowException(v8::Exception::Error(
-      v8::String::New("Invalid number of parameters, <%= arity %> expected.")));
+  v8::Isolate*  isolate = info.GetIsolate();
+  if (info.Length() != <%= arity %>) {
+    info.GetReturnValue().Set(isolate->ThrowException(v8::Exception::Error(
+      v8::String::NewFromUtf8(isolate, "Invalid number of parameters, <%= arity %> expected."))));
+    return;
   }
 
-    T *o = node::ObjectWrap::Unwrap<T>(args.This());
+  T *o = node::ObjectWrap::Unwrap<T>(info.This());
   if (!o) {
-    return v8::ThrowException(v8::String::New("Unable to unwrap native object."));
+    info.GetReturnValue().Set(isolate->ThrowException(
+      v8::String::NewFromUtf8(isolate, "Unable to unwrap native object.")));
+    return;
   }
 
   try {
     <% (1..arity).each do |i| %>
-      ConvertFromJS<<%= typename_for_index(i) %>> <%= param_name_for_index(i) %>(args[<%= i-1 %>]);
+      ConvertFromJS<<%= typename_for_index(i) %>> <%= param_name_for_index(i) %>(info[<%= i-1 %>]);
     <% end %>
-    return ConvertToJS<RV>((o->*MemFunc)(<%= params_pass(arity) %>));
+    info.GetReturnValue().Set(ConvertToJS<RV>((o->*MemFunc)(<%= params_pass(arity) %>)));
   } catch( std::exception const & ex ) {
-    return v8::ThrowException( v8::Exception::Error(v8::String::New(ex.what())));
+    info.GetReturnValue().Set(isolate->ThrowException(
+      v8::Exception::Error(v8::String::NewFromUtf8(isolate, ex.what()))));
   } catch( ... ) {
-    return v8::ThrowException( v8::Exception::Error(v8::String::New("Native function threw an unknown exception.")));
+    info.GetReturnValue().Set(isolate->ThrowException(
+      v8::Exception::Error(v8::String::NewFromUtf8(isolate, "Native function threw an unknown exception."))));
   }
 }
 
@@ -91,28 +98,34 @@ VOID_FUNCTION=<<VOID_FUNCTION_TEXT
 
 // arity: <%= arity %>, const: <%= const_funcs %>
 
-<%= types_decl(arity)%> v8::Handle<v8::Value> VoidMemberFunctionWrapper(void (T::*MemFunc)(<%= params_fp_decl(arity) %>)<%= const_funcs %>, v8::Arguments const & args )
+<%= types_decl(arity)%> void VoidMemberFunctionWrapper(void (T::*MemFunc)(<%= params_fp_decl(arity) %>)<%= const_funcs %>, const v8::FunctionCallbackInfo<v8::Value>& info )
 {
-  if (args.Length() != <%= arity %>) {
-    return ThrowException(v8::Exception::Error(
-      v8::String::New("Invalid number of parameters, <%= arity %> expected.")));
+  v8::Isolate* isolate = info.GetIsolate();
+  if (info.Length() != <%= arity %>) {
+    info.GetReturnValue().Set(isolate->ThrowException(v8::Exception::Error(
+      v8::String::NewFromUtf8(isolate, "Invalid number of parameters, <%= arity %> expected."))));
+    return;
   }
 
-    T *o = node::ObjectWrap::Unwrap<T>(args.This());
+  T *o = node::ObjectWrap::Unwrap<T>(info.This());
   if (!o) {
-    return v8::ThrowException(v8::String::New("Unable to unwrap native object."));
+    info.GetReturnValue().Set(isolate->ThrowException(
+      v8::String::NewFromUtf8(isolate, "Unable to unwrap native object.")));
+    return;
   }
 
   try {
     <% (1..arity).each do |i| %>
-      ConvertFromJS<<%= typename_for_index(i) %>> <%= param_name_for_index(i) %>(args[<%= i-1 %>]);
+      ConvertFromJS<<%= typename_for_index(i) %>> <%= param_name_for_index(i) %>(info[<%= i-1 %>]);
     <% end %>
      (o->*MemFunc)(<%= params_pass(arity) %>);
-     return v8::Undefined();
+     info.GetReturnValue().SetUndefined();
   } catch( std::exception const & ex ) {
-    return v8::ThrowException( v8::Exception::Error(v8::String::New(ex.what())));
+    info.GetReturnValue().Set(isolate->ThrowException( v8::Exception::Error(
+      v8::String::NewFromUtf8(isolate, ex.what()))));
   } catch( ... ) {
-    return v8::ThrowException( v8::Exception::Error(v8::String::New("Native function threw an unknown exception.")));
+    info.GetReturnValue().Set(isolate->ThrowException( v8::Exception::Error(
+      v8::String::NewFromUtf8(isolate, "Native function threw an unknown exception."))));
   }
 }
 
