@@ -18,21 +18,21 @@
 
 //var pb = require('webos-sysbus');
 var pb = require('palmbus');
-var sys = require('sys');
+var util = require('util');
 var _ = require('underscore')._;
 
-sys.log("creating javascript service client");
+util.log("creating javascript service client");
 
 function responseArrived(message) {
-	sys.log("responseArrived[" + message.responseToken() + "]:" + message.payload());
+	util.log("responseArrived[" + message.responseToken() + "]:" + message.payload());
 }
 
 function delayWithTimeoutResponseArrived(message) {
-	sys.log("delayWithTimeoutResponseArrived[" + message.responseToken() + "]:" + message.payload());
+	util.log("delayWithTimeoutResponseArrived[" + message.responseToken() + "]:" + message.payload());
 }
 
 function delayResponseArrived(message) {
-	sys.log("delayResponseArrived[" + message.responseToken() + "]:" + message.payload());
+	util.log("delayResponseArrived[" + message.responseToken() + "]:" + message.payload());
 }
 
 var h = new pb.Handle("com.sample.service", false);

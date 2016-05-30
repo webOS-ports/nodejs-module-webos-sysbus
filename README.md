@@ -72,14 +72,14 @@ Usage Notes
 *Example client*
 
     var pb = require('webos-sysbus');
-    var sys = require('sys');
+    var util = require('util');
     var _ = require('underscore')._;
 
     function responseArrived(message) {
-    	sys.log("responseArrived[" + message.responseToken() + "]:" + message.payload());
+    	uril.log("responseArrived[" + message.responseToken() + "]:" + message.payload());
     }
 
-    sys.log("creating ls2 handle object");
+    util.log("creating ls2 handle object");
 
     var h = new pb.Handle("com.sample.service", false);
 
