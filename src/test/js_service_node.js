@@ -18,21 +18,20 @@
 
 //var pb = require('webos-sysbus');
 var pb = require('palmbus');
-var sys = require('sys');
 var _ = require('underscore')._;
 
 var h;
 
-sys.log("creating javascript service");
+console.log("creating javascript service");
 
 function testCallback (message) {
-    sys.log("payload in testCallback: '" + message.payload() + "'");
+    console.log("payload in testCallback: '" + message.payload() + "'");
     var r = {msg: "ahoy, matie " + message.payload()};
     message.respond(JSON.stringify(r));
 }
 
 function delayCallback (message) {
-    sys.log("payload in testCallback: '" + message.payload() + "'");
+    console.log("payload in testCallback: '" + message.payload() + "'");
     var params = JSON.parse(message.payload());
     var r = {
         msg: "ahoy, matie ",
@@ -59,7 +58,7 @@ function dieCallback (message) {
 }
 
 function requestArrived(message) {
-    sys.log("requestArrived");
+    console.log("requestArrived");
     message.print();
     switch(message.method()) {
     case "test":
