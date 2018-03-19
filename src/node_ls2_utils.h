@@ -1,20 +1,18 @@
-/* @@@LICENSE
-*
-*      Copyright (c) 2010-2014 LG Electronics, Inc.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*
-* LICENSE@@@ */
+// Copyright (c) 2010-2018 LG Electronics, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
 
 #ifndef NODE_LS2_UTILS_H
 #define NODE_LS2_UTILS_H
@@ -46,21 +44,36 @@ template <typename T> v8::Handle<v8::Value> ConvertToJS(T v);
 // cannot be copied, so we can't return it from a function.
 template <typename T> struct ConvertFromJS {
 	explicit ConvertFromJS(const v8::Handle<v8::Value>&);
-	operator T();
+	T value() const;
 };
 
 template <> struct ConvertFromJS<const char*> {
-	explicit ConvertFromJS(const v8::Handle<v8::Value>& value) : fString(value) {}
-	operator const char*() {
+	explicit ConvertFromJS(const v8::Handle<v8::Value>& value) : isNull(value->IsNull() || value->IsUndefined()), fString(value) {}
+	const char* value() const {
+		return isNull ? nullptr : *fString;
+	}
+
+private:
+	bool isNull;
+	v8::String::Utf8Value fString;
+};
+
+template <> struct ConvertFromJS<std::string> {
+	explicit ConvertFromJS(const v8::Handle<v8::Value>& value) : isNull(value->IsNull() || value->IsUndefined()), fString(value) {}
+	std::string value() const {
+		if (isNull) {
+			throw std::runtime_error("Null value but string expected");
+		}
 		return *fString;
 	}
-	
+private:
+	bool isNull;
 	v8::String::Utf8Value fString;
 };
 
 template <> struct ConvertFromJS<unsigned long> {
 	explicit ConvertFromJS(const v8::Handle<v8::Value>& value) : fValue(value->Uint32Value()) {}
-	operator unsigned long() {
+	unsigned long value() const {
 		return fValue;
 	}
 	
@@ -69,7 +82,7 @@ template <> struct ConvertFromJS<unsigned long> {
 
 template <> struct ConvertFromJS<int> {
 	explicit ConvertFromJS(const v8::Handle<v8::Value>& value) : fValue(value->Int32Value()) {}
-	operator int() {
+	int value() const {
 		return fValue;
 	}
 

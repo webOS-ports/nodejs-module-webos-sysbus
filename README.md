@@ -1,10 +1,9 @@
 nodejs-module-webos-sysbus
-====================
+==========================
 
 Summary
 -------
 A module for nodejs that allows Javascript access to the Open webOS system bus
-
 
 How to Build on Linux
 =====================
@@ -14,14 +13,14 @@ How to Build on Linux
 Below are the tools and libraries (and their minimum versions) required to build
 _nodejs-module-webos-sysbus_:
 
-- cmake (version required by openwebos/cmake-modules-webos)
-- g++ 4.6.3
-- glib-2.0 2.32.1
-- make (any version)
-- openwebos/cmake-modules-webos 1.0.0 RC3
-- openwebos/luna-service2 3.0.0
-- openwebos/nodejs 0.4.12-0webos3
-- pkg-config 0.26
+* cmake (version required by webosose/cmake-modules-webos)
+* g++ 4.6.3
+* glib-2.0 2.32.1
+* make (any version)
+* webosose/cmake-modules-webos 1.0.0 RC3
+* webosose/luna-service2 3.0.0
+* webosose/nodejs 0.4.12-0webos3
+* pkg-config 0.26
 
 ## Building
 
@@ -38,11 +37,11 @@ The directory under which the files are installed defaults to `/usr/local/webos`
 You can install them elsewhere by supplying a value for `WEBOS_INSTALL_ROOT`
 when invoking `cmake`. For example:
 
-    $ cmake -D WEBOS_INSTALL_ROOT:PATH=$HOME/projects/openwebos ..
+    $ cmake -D WEBOS_INSTALL_ROOT:PATH=$HOME/projects/webosose ..
     $ make
     $ make install
 
-will install the files in subdirectories of `$HOME/projects/openwebos`.
+will install the files in subdirectories of `$HOME/projects/webosose`.
 
 Specifying `WEBOS_INSTALL_ROOT` also causes `pkg-config` to look in that tree
 first before searching the standard locations. You can specify additional
@@ -69,33 +68,34 @@ You will need to use `sudo` if you did not specify `WEBOS_INSTALL_ROOT`.
 
 Usage Notes
 ===========
-*Example client*
 
-    var pb = require('webos-sysbus');
-    var _ = require('underscore')._;
+*Example client (see ./src/test/ls2_app_test.js for details)*
+```
+    var palmbus = require('palmbus');
+    palmbus.setAppId("com.webos.nodeclient.example");
 
     function responseArrived(message) {
-    	uril.log("responseArrived[" + message.responseToken() + "]:" + message.payload());
+        console.log("responseArrived[" + message.responseToken() + "]:" + message.payload());
     }
 
     console.log("creating ls2 handle object");
 
-    var h = new pb.Handle("com.sample.service", false);
+    var h = new palmbus.Handle("com.webos.nodeclient.example");
+    var params = {msg: "Hi there"};
+    var request = h.call("palm://com.webos.nodeservice.example/test", JSON.stringify(params));
+    request.addListener('response', responseArrived);
+```
 
-    var p = {msg: "Rob"};
-    var s = JSON.stringify(p);
-    var call = h.call("palm://com.palm.node_js_service/test", s);
-    call.addListener('response', responseArrived);
+*Example service (see ./src/test/js_app_service_node.js for details)*
+```
+    var palmbus = require('palmbus');
+    palmbus.setAppId("com.webos.nodeservice.example");
 
-*Example service*
-
-    var pb = require('webos-sysbus');
-
-    console.log("creating javascript service");
+    console.log("creating example javascript service");
 
     function testCallback (message) {
-        console.log("payload in testCallback: '" + message.payload() + "'");
-        var r = {msg: "ahoy, matie " + message.payload()};
+        console.log("payload in test call: '" + message.payload() + "'");
+        var r = {msg: "echo request: " + message.payload()};
         message.respond(JSON.stringify(r));
     }
 
@@ -108,45 +108,41 @@ Usage Notes
         }
     }
 
-    var h = new pb.Handle("com.palm.node_js_service", false);
-    h.registerMethod("", "test")
-
+    var h = new palmbus.Handle("com.webos.nodeservice.example");
+    h.registerMethod("/", "test")
     h.addListener('request', requestArrived);
+```
 
-## Event, Object, and Method Reference
+## Function, Event, Object, and Method Reference
 
-The following section lists the objects that _nodejs-module-webos-sysbus_ adds, what methods
+The following section lists the functions and objects that _nodejs-module-webos-sysbus_ adds, what methods
 you can call on those objects and what events those objects emit.
 
-### Events
+### Functions
 
-#### 'cancel' event
+#### setAppId(appId)
 
-The 'cancel' event is emitted from a Handle object when a message sent or received
-via that Handle is canceled. The canceled message is passed as the single parameter
-to any event listener.
+This function sets application ID for Luna services registered in this JS application.
+Application ID allows to enforce application-based LS2 security restrictions for executed
+Node.js service. This ID should be set in service bootstrap code.
 
-#### 'request' event
+### Handle object
 
-The 'request' event is emitted from a Handle object when a method registered on
-that handle is invoked by the bus. The message that invoked the method is passed
-as the single parameter to any event listener. The category() and method() methods
-of the message object can be used to dispatch the request to an appropriate handler.
+#### Handle(serviceName, [publicBus])
 
-#### 'response' event
+Constructor function used to create a new LS2 service bus object.
 
-The 'response' event is emitted by a Call object when a response to that call is
-received. The message that was received is passed as the single parameter to any
-event listener.
+Parameters:
 
-### Handle(serviceName, publicBus)
+- **serviceName** - name of a service to register
+- **publicBus [deprecated][optional]** - deprecated argument. LS2 public/private buses separation
+is obsolete and use of separate buses is discouraged. If this argument is not passed -
+registered service will use security restrictions associated with application ID set
+using _**setAppId**_ function.
+When specified this argument should be true for services registered on both the public and
+private buses, or false for private bus only services.
 
-Constructor function used to create a new Palm service bus object. The first
-parameter should be the name of a service. `publicBus` should be true for services
- registered on both the public and private buses, or false for private bus only
-services.
-
-An object created with webOS.Handle has the following methods:
+An object created with palmbus.Handle has the following methods:
 
 #### call(serviceNameAndMethod, methodParameters)
 #### watch(serviceNameAndMethod, methodParameters)
@@ -172,6 +168,27 @@ request to an appropriate handler.
 
 Enable a message to be used as a subscription. See the Luna Service Library
 documentation for a more detailed discussion of subscriptions.
+
+### Handle events
+
+#### 'cancel' event
+
+The 'cancel' event is emitted from a Handle object when a message sent or received
+via that Handle is canceled. The canceled message is passed as the single parameter
+to any event listener.
+
+#### 'request' event
+
+The 'request' event is emitted from a Handle object when a method registered on
+that handle is invoked by the bus. The message that invoked the method is passed
+as the single parameter to any event listener. The category() and method() methods
+of the message object can be used to dispatch the request to an appropriate handler.
+
+#### 'response' event
+
+The 'response' event is emitted by a Call object when a response to that call is
+received. The message that was received is passed as the single parameter to any
+event listener.
 
 ### Call object
 
@@ -279,15 +296,10 @@ released immediately.
 
 # Copyright and License Information
 
-Unless otherwise specified, all content, including all source code files and
-documentation files in this repository are:
+Copyright (c) 2010-2018 LG Electronics, Inc.
 
-Copyright (c) 2010-2013 LG Electronics, Inc.
-
-Unless otherwise specified or set forth in the NOTICE file, all content,
-including all source code files and documentation files in this repository are:
 Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this content except in compliance with the License.
+you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
 http://www.apache.org/licenses/LICENSE-2.0
@@ -297,3 +309,5 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+
+SPDX-License-Identifier: Apache-2.0

@@ -1,6 +1,4 @@
-# @@@LICENSE
-#
-# Copyright (c) 2010-2013 LG Electronics, Inc.
+# Copyright (c) 2010-2018 LG Electronics, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# LICENSE@@@
+# SPDX-License-Identifier: Apache-2.0
 
 cmake_minimum_required(VERSION 2.8.7)
 
@@ -22,7 +20,7 @@ project(webos-sysbus CXX)
 
 include(webOS/webOS)
 webos_modules_init(1 0 0 QUALIFIER RC2)
-webos_component(2 0 0)
+webos_component(2 0 1)
 
 include(FindPkgConfig)
 
@@ -38,7 +36,7 @@ pkg_check_modules(GLIB2 REQUIRED glib-2.0)
 include_directories(${GLIB2_INCLUDE_DIRS})
 webos_add_compiler_flags(ALL ${LSGLIB2_CFLAGS_OTHER})
 
-webos_add_compiler_flags(ALL -g -Wall -Wno-error=strict-aliasing -DEV_MULTIPLICITY=0)
+webos_add_compiler_flags(ALL -g -Wall -Wno-error=strict-aliasing -DEV_MULTIPLICITY=0 CXX -std=c++11)
 
 # Can't specify --no-undefined because the plugin is allowed to link with all of
 # the routines from the embedded v8 when it is loaded at runtime, but there's no

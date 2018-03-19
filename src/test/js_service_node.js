@@ -1,6 +1,4 @@
-// @@@LICENSE
-//
-//      Copyright (c) 2010-2013 LG Electronics, Inc.
+// Copyright (c) 2010-2018 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,24 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// LICENSE@@@
+// SPDX-License-Identifier: Apache-2.0
 
 //var pb = require('webos-sysbus');
 var pb = require('palmbus');
+var sys = require('sys');
 var _ = require('underscore')._;
 
 var h;
 
-console.log("creating javascript service");
+sys.log("creating javascript service");
 
 function testCallback (message) {
-    console.log("payload in testCallback: '" + message.payload() + "'");
+    sys.log("payload in testCallback: '" + message.payload() + "'");
     var r = {msg: "ahoy, matie " + message.payload()};
     message.respond(JSON.stringify(r));
 }
 
 function delayCallback (message) {
-    console.log("payload in testCallback: '" + message.payload() + "'");
+    sys.log("payload in testCallback: '" + message.payload() + "'");
     var params = JSON.parse(message.payload());
     var r = {
         msg: "ahoy, matie ",
@@ -58,7 +57,7 @@ function dieCallback (message) {
 }
 
 function requestArrived(message) {
-    console.log("requestArrived");
+    sys.log("requestArrived");
     message.print();
     switch(message.method()) {
     case "test":
@@ -76,7 +75,7 @@ function requestArrived(message) {
     }
 }
 
-h = new pb.Handle("com.palm.node_js_service", false);
+h = new pb.Handle("com.webos.node_js_service", false);
 h.registerMethod("", "test")
 h.registerMethod("", "delay")
 h.registerMethod("", "die")

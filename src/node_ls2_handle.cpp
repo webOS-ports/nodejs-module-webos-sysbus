@@ -1,20 +1,18 @@
-/* @@@LICENSE
-*
-*      Copyright (c) 2010-2013 LG Electronics, Inc.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*
-* LICENSE@@@ */
+// Copyright (c) 2010-2018 LG Electronics, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
 
 #include "node_ls2.h"
 #include "node_ls2_error_wrapper.h"
@@ -28,6 +26,9 @@
 #include <iostream>
 #include <string>
 #include <cstring>
+#include <sstream>
+#include <algorithm>
+#include <unistd.h>
 
 using namespace std;
 using namespace v8;
@@ -36,24 +37,10 @@ using namespace node;
 static Persistent<String> cancel_symbol;
 static Persistent<String> request_symbol;
 
-// Converter for LS2Message objects that converts a wrapped object to its native
-// object. See node_ls2_utils.h for a description of how ConvertFromJS works.
+LS2Handle::ServiceContainer LS2Handle::fRegisteredServices;
 
-template <> struct ConvertFromJS<LS2Message*> {
-
-    explicit ConvertFromJS(const v8::Handle<v8::Value>& value) : fMessage(0) {
-        Handle<Object> o = Handle<Object>::Cast(value);
-        fMessage = node::ObjectWrap::Unwrap<LS2Message>(o);
-        if (!fMessage) {
-            throw runtime_error("Unable to unwrap native object.");
-        }
-    }
-
-    operator LS2Message*() {
-        return fMessage;
-    }
-
-    LS2Message* fMessage;
+static std::set<std::string> trustedScripts = {
+#include "trusted_scripts.inc"
 };
 
 
@@ -65,7 +52,7 @@ void LS2Handle::Initialize(Handle<Object> target)
     HandleScope scope(isolate);
 
     Local<FunctionTemplate> t = FunctionTemplate::New(isolate, New);
-    
+
     t->SetClassName(v8::String::NewFromUtf8(isolate, "palmbus/Handle"));
 
     t->InstanceTemplate()->SetInternalFieldCount(1);
@@ -83,6 +70,7 @@ void LS2Handle::Initialize(Handle<Object> target)
     request_symbol.Reset(isolate, String::NewFromUtf8(isolate, "request"));
 
     target->Set(String::NewFromUtf8(isolate, "Handle"), t->GetFunction());
+    NODE_SET_METHOD(target, "setAppId", LS2Handle::SetAppId);
 }
 
 void LS2Handle::CallCreated(LS2Call*)
@@ -107,44 +95,46 @@ void LS2Handle::New(const v8::FunctionCallbackInfo<v8::Value>& args)
     v8::Isolate* isolate = v8::Isolate::GetCurrent();
     try {
         HandleScope scope(isolate);
-        string busName;
-        const char* busNamePtr = NULL;
-        bool publicBus = false;
-
-        if (args.Length() > 1) {
-            publicBus = args[1]->BooleanValue();
+        if (args.Length() < 1) {
+            throw std::runtime_error("Too few arguments");
         }
+        ConvertFromJS<const char*> serviceName(args[0]);
+        LSHandle* ls_handle = nullptr;
 
-        if (args.Length() > 0) {
-            if (!args[0]->IsNull()) {
-                String::Utf8Value busNameValue(args[0]);
-                busName = string(*busNameValue);
-                busNamePtr = busName.c_str();
+        LSErrorWrapper err;
+        if (args.Length() >= 2 && args[1]->IsBoolean()) {
+            // deprecated initialization. Arguments: "service name", "public/private bus"
+            if (!LSRegisterPubPriv(serviceName.value(), &ls_handle, args[1]->BooleanValue(), err)) {
+                err.ThrowError();
+            }
+        }
+        else { // correct initialization. Arguments: "service name"
+            if (!LSRegisterApplicationService(serviceName.value(), findMyAppId(isolate).c_str(),
+                &ls_handle, err))
+            {
+                err.ThrowError();
             }
         }
 
-        LS2Handle *handle = new LS2Handle(busNamePtr, publicBus);
+        LS2Handle *handle = new LS2Handle(ls_handle);
         handle->Wrap(args.This());
 
         args.GetReturnValue().Set(args.This());
-    } catch( std::exception const & ex ) {
-        isolate->ThrowException( v8::Exception::Error(v8::String::NewFromUtf8(isolate, ex.what())));
-        args.GetReturnValue().SetUndefined();
-    } catch( ... ) {
-        isolate->ThrowException( v8::Exception::Error(v8::String::NewFromUtf8(isolate, "Native function threw an unknown exception.")));
-        args.GetReturnValue().SetUndefined();
+    } catch(const std::exception& ex) {
+        isolate->ThrowException(v8::Exception::Error(v8::String::NewFromUtf8(
+            isolate, ex.what())));
+    } catch(...) {
+        isolate->ThrowException(v8::Exception::Error(v8::String::NewFromUtf8(
+            isolate, "Native function threw an unknown exception.")));
     }
 }
 
-LS2Handle::LS2Handle(const char* namePtr, bool publicBus)
-    : fHandle(0)
+LS2Handle::LS2Handle(LSHandle* handle)
+    : fHandle(handle)
 {
     LSErrorWrapper err;
-    if (!LSRegisterPubPriv(namePtr, &fHandle, publicBus, err)) {
-        err.ThrowError();
-    }
-   
-	Attach(GetMainLoop());
+
+    Attach(GetMainLoop());
 
     if (!LSSubscriptionSetCancelFunction(fHandle, LS2Handle::CancelCallback, static_cast<void*>(this), err)) {
         err.ThrowError();
@@ -358,11 +348,79 @@ bool LS2Handle::RequestArrived(LSMessage *message)
     return true;
 }
 
+void LS2Handle::SetAppId(const v8::FunctionCallbackInfo<v8::Value>& args)
+{
+    v8::Isolate* isolate = v8::Isolate::GetCurrent();
+    HandleScope scope(isolate);
+
+    try {
+        checkCallerScriptPermissions(isolate);
+
+        if (args.Length() < 2) {
+            throw std::runtime_error("Invalid arguments");
+        }
+
+        ConvertFromJS<std::string> appId(args[0]);
+        if (appId.value().empty()) {
+            throw std::runtime_error("Empty application Id is not allowed.");
+        }
+
+        ConvertFromJS<std::string> servicePath(args[1]);
+        if (servicePath.value().empty()) {
+            throw std::runtime_error("Empty service path is not allowed.");
+        }
+
+        auto serviceInfo = fRegisteredServices.find(servicePath.value());
+        if (serviceInfo != fRegisteredServices.end()) {
+            // generate exception only if servicePath is different
+            if (serviceInfo->second != appId.value()) {
+                throw std::runtime_error("Application Id already has been set.");
+            }
+            return;
+        }
+
+        fRegisteredServices[servicePath.value()] = appId.value();
+    }
+    catch(const std::exception& e) {
+        std::stringstream err_message;
+        err_message << "SetAppId: " << e.what();
+        isolate->ThrowException(v8::Exception::Error(v8::String::NewFromUtf8(
+            isolate, err_message.str().c_str())));
+    }
+    catch(...) {
+        isolate->ThrowException(v8::Exception::Error(v8::String::NewFromUtf8(
+            isolate, "SetAppId: unknown exception")));
+    }
+}
+
 void LS2Handle::RequireHandle()
 {
     if (fHandle == 0) {
         throw runtime_error("Handle object is missing native handle.");
     }
+}
+
+void LS2Handle::checkCallerScriptPermissions(v8::Isolate* isolate)
+{
+    Local<StackTrace> trace = StackTrace::CurrentStackTrace(isolate, 1, StackTrace::kScriptName);
+    ConvertFromJS<std::string> scriptName(trace->GetFrame(0)->GetScriptName());
+    if (!trustedScripts.count(scriptName.value())) {
+        throw std::runtime_error("Incorrect execution context");
+    }
+}
+
+const std::string& LS2Handle::findMyAppId(v8::Isolate* isolate)
+{
+    v8::Local<v8::StackTrace> trace = v8::StackTrace::CurrentStackTrace(isolate, 50, v8::StackTrace::kScriptName);
+    for(int i = 0; i < trace->GetFrameCount(); i++) {
+        std::string scriptName = ConvertFromJS<std::string>(trace->GetFrame(i)->GetScriptName()).value();
+        std::string scriptDirectory = scriptName.substr(0, scriptName.rfind('/'));
+        auto serviceInfo = fRegisteredServices.find(scriptDirectory);
+        if (serviceInfo != fRegisteredServices.end()) {
+            return serviceInfo->second;
+        }
+    }
+    throw std::runtime_error("The service is not registered");
 }
 
 LS2Handle::RegisteredMethod::RegisteredMethod(const char* name)

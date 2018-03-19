@@ -1,20 +1,18 @@
-/* @@@LICENSE
-*
-*      Copyright (c) 2010-2014 LG Electronics, Inc.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*
-* LICENSE@@@ */
+// Copyright (c) 2010-2018 LG Electronics, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
 
 #include "node_ls2_call.h"
 #include "node_ls2_error_wrapper.h"
@@ -23,7 +21,7 @@
 
 #include <cstring>
 #include <iostream>
-#include <lunaservice.h>
+#include <luna-service2/lunaservice.h>
 #include <stdexcept>
 #include <cstring>
 
@@ -176,7 +174,7 @@ bool LS2Call::ResponseArrived(LSMessage *message)
     fResponseCount+=1;
     EmitMessage(Local<String>::New(isolate, response_symbol), message);
     const char* category = LSMessageGetCategory(message);
-    bool messageInErrorCategory = (category && strcmp(LUNABUS_ERROR_CATEGORY, category) == 0);    
+    bool messageInErrorCategory = (category && strcmp(LUNABUS_ERROR_CATEGORY, category) == 0);
     if (messageInErrorCategory || (fResponseLimit != kUnlimitedResponses && fResponseCount >= fResponseLimit)) {
         CancelInternal(fToken, false, messageInErrorCategory);
         fToken = LSMESSAGE_TOKEN_INVALID;
@@ -190,18 +188,18 @@ void LS2Call::CancelInternal(LSMessageToken token, bool shouldThrow, bool cancel
         return;
     }
     if (shouldThrow) {
-        RequireHandle();        
+        RequireHandle();
     } else if (fHandle == 0 || !fHandle->IsValid()) {
         cerr << "Warning: Handle null on a no-throw call to CancelInternal.";
         return;
     }
     Unref();
-    
+
     // If the message was from the bus, no reason to cancel
     if (cancelDueToError) {
         return;
     }
-    
+
     // If the response limit is one we used LSCallOneReply to call. We are not required to call cancel
     // if we've already received the one response. Otherwise we need to call cancel to let
     // the ls2 library clean up.
@@ -210,7 +208,7 @@ void LS2Call::CancelInternal(LSMessageToken token, bool shouldThrow, bool cancel
         bool result = LSCallCancel(fHandle->Get(), token, err);
         if (!result) {
             if (shouldThrow) {
-                err.ThrowError();            
+                err.ThrowError();
             } else {
                 cerr << "Warning: Cancel error during no-throw call to CancelInternal.";
                 err.Print();
