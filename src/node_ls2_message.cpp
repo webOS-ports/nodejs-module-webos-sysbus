@@ -72,11 +72,12 @@ void LS2Message::Initialize (Handle<Object> target)
 // LSMessage structure.
 Local<Value> LS2Message::NewFromMessage(LSMessage* message)
 {
-    TryCatch try_catch;
-
     v8::Isolate* isolate = v8::Isolate::GetCurrent();
+    
+    TryCatch try_catch(isolate);
+
     Local<Function> function = v8::Local<FunctionTemplate>::New(isolate, gMessageTemplate)->GetFunction();
-    Local<Object> messageObject = function->NewInstance();
+    Local<Object> messageObject = function->NewInstance(isolate->GetCurrentContext()).ToLocalChecked();
 
     // If we get an exception in LS2Message::New, then it will return
     // v8::ThrowException which adds a pending exception.
