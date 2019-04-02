@@ -63,7 +63,7 @@ Local<Object> LS2Call::NewForCall()
     v8::Isolate* isolate = v8::Isolate::GetCurrent();
     Local<FunctionTemplate> lCallTemplate = Local<FunctionTemplate>::New(isolate, gCallTemplate);
     Local<Function> function = lCallTemplate->GetFunction();
-    Local<Object> callObject = function->NewInstance();
+    Local<Object> callObject = function->NewInstance(isolate->GetCurrentContext()).ToLocalChecked();
     return callObject;
 }
 
