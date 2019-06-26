@@ -35,6 +35,11 @@
             "outbound": ["*"]
         },
         {
+            "service": "org.webosports.cdav.service",
+            "inbound": ["*"],
+            "outbound": ["*"]
+        },
+        {
             "service": "org.webosports.service.update",
             "inbound": ["*"],
             "outbound": ["*"]

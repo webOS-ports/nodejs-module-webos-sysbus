@@ -9,6 +9,51 @@
             "service": "*",
             "inbound": [],
             "outbound": []
+        },
+        {
+            "service": "com.palm.keymanager",
+            "inbound": ["*"],
+            "outbound": ["*"]
+        },
+        {
+            "service": "com.palm.service.accounts",
+            "inbound": ["*"],
+            "outbound": ["*"]
+        },
+        {
+            "service": "com.palm.service.calendar.reminders",
+            "inbound": ["*"],
+            "outbound": ["*"]
+        },
+        {
+            "service": "com.palm.service.contacts",
+            "inbound": ["*"],
+            "outbound": ["*"]
+        },
+        {
+            "service": "com.palm.service.contacts.linker",
+            "inbound": ["*"],
+            "outbound": ["*"]
+        },
+        {
+            "service": "org.webosinternals.tweaks.prefs",
+            "inbound": ["*"],
+            "outbound": ["*"]
+        },
+        {
+            "service": "org.webosports.cdav.service",
+            "inbound": ["*"],
+            "outbound": ["*"]
+        },
+        {
+            "service": "org.webosports.service.update",
+            "inbound": ["*"],
+            "outbound": ["*"]
+        },
+        {
+            "service": "",
+            "inbound": ["*"],
+            "outbound": ["*"]
         }
     ]
 }
