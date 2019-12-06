@@ -30,7 +30,7 @@
             "outbound": ["*"]
         },
         {
-            "service": "org.webosinternals.tweaks.prefs",
+            "service": "org.webosports.service.tweaks.prefs",
             "inbound": ["*"],
             "outbound": ["*"]
         },
