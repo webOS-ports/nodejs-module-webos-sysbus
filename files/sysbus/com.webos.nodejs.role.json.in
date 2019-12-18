@@ -44,6 +44,11 @@
             "outbound": ["*"]
         },
         {
+            "service": "org.webosports.service.filemanager",
+            "inbound": ["*"],
+            "outbound": ["*"]
+        },
+        {
             "service": "org.webosports.service.update",
             "inbound": ["*"],
             "outbound": ["*"]
