@@ -1,10 +1,14 @@
 {
-    "role": {
-        "exeName": "@WEBOS_INSTALL_BINDIR@/node",
-        "type": "privileged",
-        "allowedNames": ["*"]
-    },
-    "permissions": [{
+    "exeName":"@WEBOS_INSTALL_BINDIR@/node",
+    "type": "privileged",
+    "allowedNames": ["*"],
+    "permissions": [
+        {
+            "service": "*",
+            "inbound": [],
+            "outbound": []
+        },
+        {
             "service": "com.palm.keymanager",
             "inbound": ["*"],
             "outbound": ["*"]
@@ -35,7 +39,7 @@
             "outbound": ["*"]
         },
         {
-            "service": "org.webosports.cdav.service",
+            "service": "org.webosports.service.cdav",
             "inbound": ["*"],
             "outbound": ["*"]
         },
