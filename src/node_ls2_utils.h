@@ -32,7 +32,7 @@
 // function, though, so there need to be specializations for each of the types that are used to
 // instantiate ConvertToJS. The more generic specializations are found in node_ls2_utils.cpp, others
 // are found in the source files where the type in question is used.
-template <typename T> v8::Handle<v8::Value> ConvertToJS(T v);
+template <typename T> v8::Local<v8::Value> ConvertToJS(T v);
 
 
 // This is a templated structure declaration for a structure that automatically converts a V8
@@ -43,12 +43,12 @@ template <typename T> v8::Handle<v8::Value> ConvertToJS(T v);
 // String::Utf8Value() structure to convert v8 strings to const char* reference. String::Utf8Value
 // cannot be copied, so we can't return it from a function.
 template <typename T> struct ConvertFromJS {
-	explicit ConvertFromJS(const v8::Handle<v8::Value>&);
+	explicit ConvertFromJS(const v8::Local<v8::Value>&);
 	T value() const;
 };
 
 template <> struct ConvertFromJS<const char*> {
-	explicit ConvertFromJS(const v8::Handle<v8::Value>& value) : isNull(value->IsNull() || value->IsUndefined()), fString(value) {}
+	explicit ConvertFromJS(const v8::Local<v8::Value>& value) : isNull(value->IsNull() || value->IsUndefined()), fString(v8::Isolate::GetCurrent(), value) {}
 	const char* value() const {
 		return isNull ? nullptr : *fString;
 	}
@@ -59,7 +59,7 @@ private:
 };
 
 template <> struct ConvertFromJS<std::string> {
-	explicit ConvertFromJS(const v8::Handle<v8::Value>& value) : isNull(value->IsNull() || value->IsUndefined()), fString(value) {}
+	explicit ConvertFromJS(const v8::Local<v8::Value>& value) : isNull(value->IsNull() || value->IsUndefined()), fString(v8::Isolate::GetCurrent(), value) {}
 	std::string value() const {
 		if (isNull) {
 			throw std::runtime_error("Null value but string expected");
@@ -72,7 +72,7 @@ private:
 };
 
 template <> struct ConvertFromJS<unsigned long> {
-	explicit ConvertFromJS(const v8::Handle<v8::Value>& value) : fValue(value->Uint32Value()) {}
+	explicit ConvertFromJS(const v8::Local<v8::Value>& value) : fValue(value->Uint32Value(v8::Isolate::GetCurrent()->GetCurrentContext()).FromMaybe(0)) {}
 	unsigned long value() const {
 		return fValue;
 	}
@@ -81,7 +81,7 @@ template <> struct ConvertFromJS<unsigned long> {
 };
 
 template <> struct ConvertFromJS<int> {
-	explicit ConvertFromJS(const v8::Handle<v8::Value>& value) : fValue(value->Int32Value()) {}
+	explicit ConvertFromJS(const v8::Local<v8::Value>& value) : fValue(value->Int32Value(v8::Isolate::GetCurrent()->GetCurrentContext()).FromMaybe(0)) {}
 	int value() const {
 		return fValue;
 	}

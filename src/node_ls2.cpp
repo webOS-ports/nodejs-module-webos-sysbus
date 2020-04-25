@@ -241,7 +241,7 @@ static void check_cb(uv_check_t* w)
 
 static struct econtext default_context;
 
-void init(Handle<Object> target)
+void init(Local<Object> target)
 {
     HandleScope scope(Isolate::GetCurrent());
     gMainLoop = g_main_loop_new(NULL, true);

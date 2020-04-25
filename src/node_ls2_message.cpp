@@ -27,7 +27,7 @@ using namespace node;
 
 // Converter for LSMessage tokens. See node_ls2_utils.h for a description 
 // of how the conversion system works.
-template <> v8::Handle<v8::Value> ConvertToJS<LSMessageToken>(LSMessageToken v)
+template <> v8::Local<v8::Value> ConvertToJS<LSMessageToken>(LSMessageToken v)
 {
     return v8::Integer::NewFromUnsigned(v8::Isolate::GetCurrent(), v);
 }
@@ -38,7 +38,7 @@ Persistent<FunctionTemplate> LS2Message::gMessageTemplate;
 
 // Called during add-on initialization to add the "Message" template function
 // to the target object.
-void LS2Message::Initialize (Handle<Object> target)
+void LS2Message::Initialize (Local<Object> target)
 {
     v8::Isolate* isolate = v8::Isolate::GetCurrent();
     HandleScope scope(isolate);
@@ -65,7 +65,7 @@ void LS2Message::Initialize (Handle<Object> target)
     NODE_SET_PROTOTYPE_METHOD(t, "isSubscription", IsSubscriptionWrapper);
     NODE_SET_PROTOTYPE_METHOD(t, "respond", RespondWrapper);
 
-    target->Set(String::String::NewFromUtf8(isolate, "Message"), t->GetFunction());
+    target->Set(String::String::NewFromUtf8(isolate, "Message"), t->GetFunction(isolate->GetCurrentContext()).ToLocalChecked());
 }
 
 // Used by LSHandle to create a "Message" object that wraps a particular
@@ -76,7 +76,7 @@ Local<Value> LS2Message::NewFromMessage(LSMessage* message)
     
     TryCatch try_catch(isolate);
 
-    Local<Function> function = v8::Local<FunctionTemplate>::New(isolate, gMessageTemplate)->GetFunction();
+    Local<Function> function = v8::Local<FunctionTemplate>::New(isolate, gMessageTemplate)->GetFunction(isolate->GetCurrentContext()).ToLocalChecked();
     Local<Object> messageObject = function->NewInstance(isolate->GetCurrentContext()).ToLocalChecked();
 
     // If we get an exception in LS2Message::New, then it will return
@@ -93,7 +93,7 @@ Local<Value> LS2Message::NewFromMessage(LSMessage* message)
     } else {
         // We got an exception; If we try to continue we're going to lose
         // a message, so just crash
-        v8::String::Utf8Value exception(try_catch.Exception());
+        v8::String::Utf8Value exception(isolate, try_catch.Exception());
         syslog(LOG_USER | LOG_CRIT, "%s: exception: %s; aborting", __PRETTY_FUNCTION__, 
                                     *exception ? *exception : "no exception string");
         abort();
