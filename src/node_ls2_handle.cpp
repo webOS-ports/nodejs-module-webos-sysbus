@@ -46,7 +46,7 @@ static std::set<std::string> trustedScripts = {
 
 // Called during add-on initialization to add the "Handle" template function
 // to the target object.
-void LS2Handle::Initialize(Handle<Object> target)
+void LS2Handle::Initialize(Local<Object> target)
 {
     v8::Isolate* isolate = v8::Isolate::GetCurrent();
     HandleScope scope(isolate);
@@ -69,7 +69,7 @@ void LS2Handle::Initialize(Handle<Object> target)
     cancel_symbol.Reset(isolate, String::NewFromUtf8(isolate, "cancel"));
     request_symbol.Reset(isolate, String::NewFromUtf8(isolate, "request"));
 
-    target->Set(String::NewFromUtf8(isolate, "Handle"), t->GetFunction());
+    target->Set(String::NewFromUtf8(isolate, "Handle"), t->GetFunction(isolate->GetCurrentContext()).ToLocalChecked());
     NODE_SET_METHOD(target, "setAppId", LS2Handle::SetAppId);
 }
 
@@ -104,7 +104,7 @@ void LS2Handle::New(const v8::FunctionCallbackInfo<v8::Value>& args)
         LSErrorWrapper err;
         if (args.Length() >= 2 && args[1]->IsBoolean()) {
             // deprecated initialization. Arguments: "service name", "public/private bus"
-            if (!LSRegisterPubPriv(serviceName.value(), &ls_handle, args[1]->BooleanValue(), err)) {
+            if (!LSRegisterPubPriv(serviceName.value(), &ls_handle, args[1]->BooleanValue(isolate->GetCurrentContext()).FromMaybe(false), err)) {
                 err.ThrowError();
             }
         }
@@ -155,30 +155,30 @@ LS2Handle::~LS2Handle()
 
 void LS2Handle::CallWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    MemberFunctionWrapper<LS2Handle, Handle<Value>, const char*, const char*>(&LS2Handle::Call, args);
+    MemberFunctionWrapper<LS2Handle, Local<Value>, const char*, const char*>(&LS2Handle::Call, args);
 }
 
-Handle<Value> LS2Handle::Call(const char* busName, const char* payload)
+Local<Value> LS2Handle::Call(const char* busName, const char* payload)
 {
     return CallInternal(busName, payload, 1);
 }
 
 void LS2Handle::WatchWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    MemberFunctionWrapper<LS2Handle, Handle<Value>, const char*, const char*>(&LS2Handle::Watch, args);
+    MemberFunctionWrapper<LS2Handle, Local<Value>, const char*, const char*>(&LS2Handle::Watch, args);
 }
 
-Handle<Value> LS2Handle::Watch(const char* busName, const char* payload)
+Local<Value> LS2Handle::Watch(const char* busName, const char* payload)
 {
     return CallInternal(busName, payload, 2);
 }
 
 void LS2Handle::SubscribeWrapper(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
-    MemberFunctionWrapper<LS2Handle, Handle<Value>, const char*, const char*>(&LS2Handle::Subscribe, args);
+    MemberFunctionWrapper<LS2Handle, Local<Value>, const char*, const char*>(&LS2Handle::Subscribe, args);
 }
 
-Handle<Value> LS2Handle::Subscribe(const char* busName, const char* payload)
+Local<Value> LS2Handle::Subscribe(const char* busName, const char* payload)
 {
     return CallInternal(busName, payload, LS2Call::kUnlimitedResponses);
 }
@@ -277,7 +277,7 @@ void LS2Handle::SubscriptionAdd(const char* key, LS2Message* msg)
     }
 }
 
-Handle<Value> LS2Handle::CallInternal(const char* busName, const char* payload, int responseLimit)
+Local<Value> LS2Handle::CallInternal(const char* busName, const char* payload, int responseLimit)
 {
     RequireHandle();
     Local<Object> callObject = LS2Call::NewForCall();
@@ -403,7 +403,7 @@ void LS2Handle::RequireHandle()
 void LS2Handle::checkCallerScriptPermissions(v8::Isolate* isolate)
 {
     Local<StackTrace> trace = StackTrace::CurrentStackTrace(isolate, 1, StackTrace::kScriptName);
-    ConvertFromJS<std::string> scriptName(trace->GetFrame(0)->GetScriptName());
+    ConvertFromJS<std::string> scriptName(trace->GetFrame(isolate, 0)->GetScriptName());
     if (!trustedScripts.count(scriptName.value())) {
         throw std::runtime_error("Incorrect execution context");
     }
@@ -413,7 +413,7 @@ const std::string& LS2Handle::findMyAppId(v8::Isolate* isolate)
 {
     v8::Local<v8::StackTrace> trace = v8::StackTrace::CurrentStackTrace(isolate, 50, v8::StackTrace::kScriptName);
     for(int i = 0; i < trace->GetFrameCount(); i++) {
-        std::string scriptName = ConvertFromJS<std::string>(trace->GetFrame(i)->GetScriptName()).value();
+        std::string scriptName = ConvertFromJS<std::string>(trace->GetFrame(isolate, i)->GetScriptName()).value();
         std::string scriptDirectory = scriptName.substr(0, scriptName.rfind('/') + 1);
         auto serviceInfo = fRegisteredServices.find(scriptDirectory);
         if (serviceInfo != fRegisteredServices.end()) {

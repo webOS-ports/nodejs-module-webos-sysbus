@@ -32,7 +32,7 @@ class LS2Call;
 class LS2Handle : public LS2Base {
 public:
 	// Create the "Handle" function template and add it to the target.
-	static void Initialize (v8::Handle<v8::Object> target);
+	static void Initialize (v8::Local<v8::Object> target);
 
     void CallCreated(LS2Call* call);
     void CallCompleted(LS2Call* call);
@@ -51,13 +51,13 @@ private:
 	virtual ~LS2Handle();
 
 	static void CallWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
-	v8::Handle<v8::Value> Call(const char* busName, const char* payload);
+	v8::Local<v8::Value> Call(const char* busName, const char* payload);
 
 	static void WatchWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
-	v8::Handle<v8::Value> Watch(const char* busName, const char* payload);
+	v8::Local<v8::Value> Watch(const char* busName, const char* payload);
 
 	static void SubscribeWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
-	v8::Handle<v8::Value> Subscribe(const char* busName, const char* payload);
+	v8::Local<v8::Value> Subscribe(const char* busName, const char* payload);
 
 	static void CancelWrapper(const v8::FunctionCallbackInfo<v8::Value>& args);
 	bool Cancel(LSMessageToken token);
@@ -75,7 +75,7 @@ private:
 	void SubscriptionAdd(const char* key, LS2Message* msg);
 
 	// Common implmentation for Call, Watch and Subscribe
-   	v8::Handle<v8::Value> CallInternal(const char* busName, const char* payload, int responseLimit);
+   	v8::Local<v8::Value> CallInternal(const char* busName, const char* payload, int responseLimit);
 
    	// Glib integration
 	void Attach(GMainLoop *mainLoop);
@@ -94,7 +94,7 @@ private:
 	static const std::string& findMyAppId(v8::Isolate* isolate);
 	// Common routine called whenever a message arrives from the bus. Different symbols
 	// are used to differentiate requests, responses and cancelled subscriptions
-	//void EmitMessage(const v8::Handle<v8::String>& symbol, LSMessage *message);
+	//void EmitMessage(const v8::Local<v8::String>& symbol, LSMessage *message);
 
 	// Throws an exception if fHandle is 0.
 	void RequireHandle();

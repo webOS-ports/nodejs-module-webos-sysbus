@@ -27,7 +27,7 @@ class LS2Base : public node::ObjectWrap {
 protected:
 	// Common routine called whenever a message arrives from the bus. Different symbols
 	// are used to differentiate requests, responses and cancelled subscriptions
-	void EmitMessage(const v8::Handle<v8::String>& symbol, LSMessage *message);
+	void EmitMessage(const v8::Local<v8::String>& symbol, LSMessage *message);
 };
 
 #endif
