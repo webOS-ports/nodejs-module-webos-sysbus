@@ -103,8 +103,10 @@ void LS2Handle::New(const v8::FunctionCallbackInfo<v8::Value>& args)
 
         LSErrorWrapper err;
         if (args.Length() >= 2 && args[1]->IsBoolean()) {
-            // deprecated initialization. Arguments: "service name", "public/private bus"
-            if (!LSRegisterPubPriv(serviceName.value(), &ls_handle, args[1]->BooleanValue(isolate->GetCurrentContext()).FromMaybe(false), err)) {
+            // deprecated initialization. Arguments: "service name", "public/private bus" (ignored)
+            // As the nodejs module is now migrated to ACG security model, it must always register
+            // names on the LS2 bus with LSRegister, without a PubPriv legacy approach.
+            if (!LSRegister(serviceName.value(), &ls_handle, err)) {
                 err.ThrowError();
             }
         }
