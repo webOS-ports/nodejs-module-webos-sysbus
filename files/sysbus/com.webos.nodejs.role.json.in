@@ -14,6 +14,11 @@
             "outbound": ["*"]
         },
         {
+            "service": "com.palm.mediapermissions",
+            "inbound": ["*"],
+            "outbound": ["*"]
+        },
+        {
             "service": "com.palm.service.accounts",
             "inbound": ["*"],
             "outbound": ["*"]
@@ -44,7 +49,17 @@
             "outbound": ["*"]
         },
         {
+            "service": "org.webosports.service.devmode",
+            "inbound": ["*"],
+            "outbound": ["*"]
+        },
+        {
             "service": "org.webosports.service.filemanager",
+            "inbound": ["*"],
+            "outbound": ["*"]
+        },
+        {
+            "service": "org.webosports.service.licenses",
             "inbound": ["*"],
             "outbound": ["*"]
         },
